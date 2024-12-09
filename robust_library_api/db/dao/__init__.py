@@ -1,6 +1,9 @@
 """Routes for swagger and redoc."""
 
-from nir_myrmiaka.db.repositories.crud.crud import CRUDRepository
-from nir_myrmiaka.db.repositories.crud.extended import ExtendedCRUDRepository
+from .crud import CRUDRepository
+from .extended import ExtendedCRUDRepository
+from .exc import RepositoryError
 
-__all__ = ["ExtendedCRUDRepository", "CRUDRepository"]
+from .interface import repository_for, extended_crud_repository_for, crud_repository_for
+
+__all__ = ["repository_for", "extended_crud_repository_for", "crud_repository_for"]

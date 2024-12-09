@@ -1,7 +1,7 @@
 from typing import List, Optional, Any, Dict, TypeVar
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import asc, desc
-from .crud import CRUDRepository
+from . import CRUDRepository
 
 T = TypeVar("T")
 
@@ -84,3 +84,4 @@ class ExtendedCRUDRepository(CRUDRepository[T]):
         Delete entities matching the filters.
         """
         return await self.delete(**filters)
+

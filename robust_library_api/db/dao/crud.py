@@ -4,7 +4,7 @@ from sqlalchemy import select as sql_select, update as sql_update, delete as sql
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .exc import (
+from . import (
     RepositoryError
 )
 
@@ -76,8 +76,6 @@ class AbstractCRUDRepository(ABC, Generic[T]):
         :raises RepositoryError: If the save operation fails.
         """
         pass
-
-T = TypeVar("T")
 
 class CRUDRepository(AbstractCRUDRepository[T]):
     def __init__(self, session: AsyncSession, model: Type[T]):
