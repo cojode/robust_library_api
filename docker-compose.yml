@@ -1,0 +1,41 @@
+services:
+  api: &main_app
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    image: robust_library_api:${ROBUST_LIBRARY_API_VERSION:-latest}
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ROBUST_LIBRARY_API_HOST: 0.0.0.0
+      ROBUST_LIBRARY_API_DB_HOST: robust_library_api-db
+      ROBUST_LIBRARY_API_DB_PORT: 5432
+      ROBUST_LIBRARY_API_DB_USER: robust_library_api
+      ROBUST_LIBRARY_API_DB_PASS: robust_library_api
+      ROBUST_LIBRARY_API_DB_BASE: robust_library_api
+
+  db:
+    image: postgres:16.3-bullseye
+    hostname: robust_library_api-db
+    environment:
+      POSTGRES_PASSWORD: "robust_library_api"
+      POSTGRES_USER: "robust_library_api"
+      POSTGRES_DB: "robust_library_api"
+    volumes:
+      - robust_library_api-db-data:/var/lib/postgresql/data
+    restart: always
+    healthcheck:
+      test: pg_isready -U robust_library_api
+      interval: 2s
+      timeout: 3s
+      retries: 40
+
+
+
+volumes:
+  robust_library_api-db-data:
+    name: robust_library_api-db-data
