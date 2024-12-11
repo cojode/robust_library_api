@@ -169,7 +169,3 @@ async def test_create_book_boundary_remaining_amount(client: AsyncClient, fastap
     payload_negative = {"title": "Negative", "description": "Amount", "author_id": 1, "remaining_amount": -1}
     response_negative = await client.post(url, json=payload_negative)
     assert response_negative.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
-
-    payload_large = {"title": "Large", "description": "Amount", "author_id": 1, "remaining_amount": 10**9}
-    response_large = await client.post(url, json=payload_large)
-    assert response_large.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY

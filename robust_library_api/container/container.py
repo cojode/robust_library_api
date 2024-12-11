@@ -62,5 +62,10 @@ def _init_container() -> Container:
     container.register(
         BookService, scope=Scope.singleton
     )
+    
+    from robust_library_api.services.borrow.service import BorrowService
+    container.register(
+        BorrowService, scope=Scope.singleton
+    )
 
     return container

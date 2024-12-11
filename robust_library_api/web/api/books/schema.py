@@ -13,7 +13,7 @@ class RequestBookCreate(BaseModel):
     title: str = Field(..., max_length=200)
     description: str = Field(..., max_length=1024)
     author_id: int = Field(...)
-    remaining_amount: int = Field(..., gt=0, le=20000)
+    remaining_amount: int = Field(..., gt=0)
 
 class RequestBookUpdate(BaseModel):
     title: Optional[str] = Field(default=None, max_length=200)
