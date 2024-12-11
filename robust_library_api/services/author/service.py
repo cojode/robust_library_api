@@ -1,11 +1,15 @@
 from robust_library_api.db.repositories.author import AuthorRepository
+from robust_library_api.db.dao.exc import ForeignKeyViolation
 from robust_library_api.db.models.author import AuthorModel
 from robust_library_api.services.utils import (
     model_row_to_dict,
     repository_fallback
 )
 from robust_library_api.services.author.exc import (
-    AuthorNotFoundError, AuthorNotFoundDeletedError, AuthorServiceRepositoryError
+    AuthorNotFoundError, 
+    AuthorNotFoundDeletedError, 
+    AuthorServiceRepositoryError,
+    AuthorStillObtainsBooksError
 )
 
 from robust_library_api.web.api.authors.schema import (
@@ -60,10 +64,10 @@ class AuthorService:
             for field, value in new_author_fields.items()
             if value is not None
         }
-        
         update_count = await self.author_repository.update_author_by_id(
             author_to_update_id=author_id, **new_author_fields_without_nones
         )
+        
         return ResponseAuthorCount(
             message=f"{update_count} author(s) updated.",
             data=update_count,
@@ -71,10 +75,14 @@ class AuthorService:
 
     @repository_fallback(AuthorServiceRepositoryError)
     async def delete_author(self, author_id: int) -> ResponseAuthorCount:
-        delete_count = await self.author_repository.delete_author_by_id(author_id=author_id)
-        if delete_count == 0:
-            raise AuthorNotFoundDeletedError(author_id)
-        return ResponseAuthorCount(
-            message=f"{delete_count} author(s) deleted.",
-            data=delete_count,
-        )
+        try:
+            delete_count = await self.author_repository.delete_author_by_id(author_id=author_id)
+        except ForeignKeyViolation:
+            raise AuthorStillObtainsBooksError(author_id)
+        else:
+            if delete_count == 0:
+                raise AuthorNotFoundDeletedError(author_id)
+            return ResponseAuthorCount(
+                message=f"{delete_count} author(s) deleted.",
+                data=delete_count,
+            )

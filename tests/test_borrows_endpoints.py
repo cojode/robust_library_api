@@ -122,3 +122,26 @@ async def test_patch_borrow(client: AsyncClient, fastapi_app: FastAPI) -> None:
     assert new_borrow_data["date_of_return"] == str(date.today())
     assert old_book_remaining_amount + 1 == new_book_remaining_amount
     assert new_book_remaining_amount == newest_book_remaining_amount
+
+@pytest.mark.anyio
+async def test_delete_with_borrow_integrity_violation(client: AsyncClient, fastapi_app: FastAPI) -> None:
+    """
+    Tests deleting a book with related borrows.
+    """
+    url = fastapi_app.url_path_for("list_books")
+    response = await client.get(url)
+    assert response.status_code == status.HTTP_200_OK
+    
+    book_id = response.json()["data"][0]["id"]
+    
+    url = fastapi_app.url_path_for("create_borrow")
+    payload = {
+        "book_id": book_id,
+        "reader_name": "abyss",
+    }
+    response = await client.post(url, json=payload)
+    assert response.status_code == status.HTTP_201_CREATED
+    
+    url = fastapi_app.url_path_for("delete_book", id=book_id)
+    response = await client.delete(url)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST

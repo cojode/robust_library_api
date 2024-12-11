@@ -2,11 +2,12 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Type, TypeVar, List, Optional, Any, Dict, Generic
 from sqlalchemy import select as sql_select, update as sql_update, delete as sql_delete, Select
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 
 from robust_library_api.db.database import Database
 from .exc import (
-    RepositoryError
+    CommonRepositoryError,
+    ForeignKeyViolation
 )
 
 T = TypeVar("T")
@@ -93,7 +94,7 @@ class CRUDRepository(AbstractCRUDRepository[T]):
                 await session.flush([instance])
                 return instance
         except SQLAlchemyError as e:
-            raise RepositoryError(f"Failed to create entity: {e}") from e
+            raise CommonRepositoryError(f"Failed to create entity: {e}") from e
 
     async def read(
         self, only_first=False, raw_query: Select = None, limit: Optional[int] = None, 
@@ -120,7 +121,7 @@ class CRUDRepository(AbstractCRUDRepository[T]):
                 return result_scalars.first() if only_first else result_scalars.all()
 
         except SQLAlchemyError as e:
-            raise RepositoryError(f"Failed to read entities: {e}") from e
+            raise CommonRepositoryError(f"Failed to read entities: {e}") from e
 
     async def update(self, fields: Dict[str, Any], **filters: Any) -> int:
         """
@@ -135,7 +136,7 @@ class CRUDRepository(AbstractCRUDRepository[T]):
                 await session.commit()
                 return result.rowcount
         except SQLAlchemyError as e:
-            raise RepositoryError(f"Failed to update entities: {e}") from e
+            raise CommonRepositoryError(f"Failed to update entities: {e}") from e
 
     async def delete(self, entity: Optional[T] = None, **filters: Any) -> int:
         """
@@ -151,8 +152,10 @@ class CRUDRepository(AbstractCRUDRepository[T]):
                 result = await session.execute(query)
                 await session.commit()
                 return result.rowcount
+        except IntegrityError as e:
+            raise ForeignKeyViolation from e
         except SQLAlchemyError as e:
-            raise RepositoryError(f"Failed to delete entities: {e}") from e
+            raise CommonRepositoryError(f"Failed to delete entities: {e}") from e
 
     async def save(self, entity: T) -> T:
         """
@@ -164,5 +167,7 @@ class CRUDRepository(AbstractCRUDRepository[T]):
                 await session.flush()
                 await session.refresh(entity)
                 return entity
+        except IntegrityError as e:
+            raise ForeignKeyViolation from e
         except SQLAlchemyError as e:
-            raise RepositoryError(f"Failed to save entity: {e}") from e
+            raise CommonRepositoryError(f"Failed to save entity: {e}") from e

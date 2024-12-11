@@ -20,3 +20,7 @@ class BookNotFoundDeletedError(BookServiceError):
 class BookServiceRepositoryError(ServiceRepositoryError):
     def __init__(self, error_message_details: str = None):
         super().__init__(f"Book service failed with repository error. {error_message_details if error_message_details else 'No details provided.'}")
+        
+class BookStillObtainsBorrowsError(BookServiceError):
+    def __init__(self, book_id: int, **details):
+        super().__init__(f"Can't delete book: Book with ID {book_id} still has related borrows in table (borrow).")

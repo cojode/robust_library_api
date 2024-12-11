@@ -4,7 +4,8 @@ from robust_library_api.services.author.service import AuthorService
 from robust_library_api.services.author.exc import (
     AuthorNotFoundError, 
     AuthorNotFoundDeletedError,
-    AuthorServiceRepositoryError
+    AuthorServiceRepositoryError,
+    AuthorStillObtainsBooksError
 )
 
 from robust_library_api.container.container import init_container
@@ -18,7 +19,8 @@ from robust_library_api.web.api.authors.schema import (
     ResponseAuthorCount,
     ResponseAuthorList,
     ResponseAuthorNotFound,
-    ResponseAuthorServiceRepositoryError
+    ResponseAuthorServiceRepositoryError,
+    ResponseAuthorStillObtainsBooks,
 )
 
 router = APIRouter()
@@ -258,6 +260,7 @@ async def delete_author(
     """
     Deletes an author from database.
     If no author were deleted, returns 404.
+    If there are any books with deleted author, deletion is prevented with 400.
     """
     try:
         await author_service.delete_author(author_id=id)
@@ -266,6 +269,12 @@ async def delete_author(
             exc_from=e,
             status=status.HTTP_404_NOT_FOUND,
             response_model=ResponseAuthorNotFound
+        )
+    except AuthorStillObtainsBooksError as e:
+        raise_http_exception_with_model_response(
+            exc_from=e,
+            status=status.HTTP_400_BAD_REQUEST,
+            response_model=ResponseAuthorStillObtainsBooks
         )
     except AuthorServiceRepositoryError as e:
         raise_http_exception_with_model_response(

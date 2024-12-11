@@ -180,3 +180,5 @@ async def test_delete_non_existent_author(client: AsyncClient, fastapi_app: Fast
     url = fastapi_app.url_path_for("delete_author", id=99999)
     response = await client.delete(url)
     assert response.status_code == status.HTTP_404_NOT_FOUND
+
+

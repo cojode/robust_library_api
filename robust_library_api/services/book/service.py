@@ -1,6 +1,8 @@
 from robust_library_api.db.repositories.book import BookRepository
 from robust_library_api.db.repositories.author import AuthorRepository
 
+from robust_library_api.db.dao.exc import ForeignKeyViolation
+
 from robust_library_api.services.utils import (
     repository_fallback, 
     model_row_to_dict
@@ -13,7 +15,8 @@ from robust_library_api.services.book.exc import (
     BookNotFoundBookError,
     BookNotFoundAuthorError,
     BookNotFoundDeletedError,
-    BookServiceRepositoryError
+    BookServiceRepositoryError,
+    BookStillObtainsBorrowsError
 )
 
 from robust_library_api.web.api.books.schema import (
@@ -96,7 +99,10 @@ class BookService:
 
     @repository_fallback(BookServiceRepositoryError)
     async def delete_book(self, book_id: int):
-        delete_count = await self.book_repository.delete_book_by_id(book_id=book_id)
+        try:
+            delete_count = await self.book_repository.delete_book_by_id(book_id=book_id)
+        except ForeignKeyViolation:
+            raise BookStillObtainsBorrowsError(book_id)
         if delete_count == 0:
             raise BookNotFoundDeletedError(book_id)
         return ResponseBookCount(

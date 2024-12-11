@@ -169,3 +169,22 @@ async def test_create_book_boundary_remaining_amount(client: AsyncClient, fastap
     payload_negative = {"title": "Negative", "description": "Amount", "author_id": 1, "remaining_amount": -1}
     response_negative = await client.post(url, json=payload_negative)
     assert response_negative.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+@pytest.mark.anyio
+async def test_author_delete_with_book_integrity_violation(client: AsyncClient, fastapi_app: FastAPI) -> None:
+    """
+    Tests deleting an author with related books.
+    """
+    url = fastapi_app.url_path_for("create_book")
+    payload = {
+        "title": "The Great Gatsby",
+        "description": "A novel by F. Scott Fitzgerald",
+        "author_id": 1,
+        "remaining_amount": 5
+    }
+    response = await client.post(url, json=payload)
+    assert response.status_code == status.HTTP_201_CREATED
+    
+    url = fastapi_app.url_path_for("delete_author", id=1)
+    response = await client.delete(url)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST

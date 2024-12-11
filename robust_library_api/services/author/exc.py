@@ -9,6 +9,10 @@ class AuthorNotFoundError(AuthorServiceError):
     def __init__(self, not_found_author_id: int, **details):
         super().__init__(f"Author with ID {not_found_author_id} not found.")
         
+class AuthorStillObtainsBooksError(AuthorServiceError):
+    def __init__(self, author_id: int, **details):
+        super().__init__(f"Can not delete author: Author with ID {author_id} still has related books in table (book).")
+        
 class AuthorNotFoundDeletedError(AuthorServiceError):
     def __init__(self, not_deleted_author_id: int, **details):
         super().__init__(f"0 author(s) deleted. Author with ID {not_deleted_author_id} not found.")

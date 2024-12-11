@@ -9,6 +9,7 @@ from robust_library_api.services.book.exc import (
     BookNotFoundAuthorError,
     BookNotFoundBookError,
     BookNotFoundDeletedError,
+    BookStillObtainsBorrowsError
 )
 
 
@@ -22,7 +23,8 @@ from robust_library_api.web.api.books.schema import (
     ResponseBookList,
     ResponseBookNotFoundBook,
     ResponseBookNotFoundAuthor,
-    ResponseBookServiceRepositoryError
+    ResponseBookServiceRepositoryError,
+    ResponseBookStillObtainsBorrowsError
 )
 
 router = APIRouter()
@@ -271,6 +273,12 @@ async def delete_book(
             exc_from=e,
             status=status.HTTP_404_NOT_FOUND,
             response_model=ResponseBookNotFoundBook
+        )
+    except BookStillObtainsBorrowsError as e:
+        raise_http_exception_with_model_response(
+            exc_from=e,
+            status=status.HTTP_400_BAD_REQUEST,
+            response_model=ResponseBookStillObtainsBorrowsError
         )
     except BookServiceRepositoryError as e:
         raise_http_exception_with_model_response(
