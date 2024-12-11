@@ -1,8 +1,7 @@
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Callable
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
-
 
 async def get_db_session(request: Request) -> AsyncGenerator[AsyncSession, None]:
     """
