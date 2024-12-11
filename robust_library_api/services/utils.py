@@ -7,7 +7,7 @@ def model_row_to_dict(author_row) -> dict:
     formatted_row.pop('_sa_instance_state', None)
     return formatted_row
 
-def safe_repository_access(custom_exception: Exception, 
+def repository_fallback(custom_exception: Exception, 
                            repository_error: Exception = RepositoryError):
     def decorator(func):
         @wraps(func)

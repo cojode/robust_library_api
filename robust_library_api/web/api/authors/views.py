@@ -210,8 +210,7 @@ async def update_author(
 
 @router.delete(
     "/authors/{id}",
-    status_code=status.HTTP_200_OK,
-    response_model=ResponseAuthorCount,
+    status_code=status.HTTP_204_NO_CONTENT,
     responses={
         200: {
             "description": "Author deleted successfully.",
@@ -243,7 +242,7 @@ async def delete_author(
     id: int, author_service: AuthorService = Depends(get_author_service)
 ):
     try:
-        return await author_service.delete_author(author_id=id)
+        await author_service.delete_author(author_id=id)
     except AuthorNotFoundDeletedError as e:
         raise_http_exception_with_model_response(
             exc_from=e,

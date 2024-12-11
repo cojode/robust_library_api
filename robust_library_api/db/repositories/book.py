@@ -18,7 +18,7 @@ class BookRepository(ExtendedCRUDRepository[BookModel]):
         return await self.find_by_id(item_id=book_id)
 
     async def update_book_by_id(
-        self, new_fields: dict[str, any], book_to_update_id: int
+        self, book_to_update_id: int, **new_fields
     ) -> int:
         return await self.update(fields=new_fields, id=book_to_update_id)
 

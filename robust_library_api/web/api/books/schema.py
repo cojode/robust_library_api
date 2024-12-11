@@ -1,27 +1,31 @@
 from pydantic import BaseModel, Field
-from typing import Optional, Any, List
+from typing import Optional
 
-class BookCreateRequest(BaseModel):
+from robust_library_api.web.api.schema import (
+    StandardSuccessResponse,
+    StandardSuccessListResponse,
+    StandardSuccessCountResponse,
+    StandardFailResponse,
+    StandardServiceRepositoryErrorResponse
+)
+
+class RequestBookCreate(BaseModel):
     title: str = Field(..., max_length=200)
     description: str = Field(..., max_length=1024)
     author_id: int = Field(...)
-    remaining_amount: int = Field(...)
+    remaining_amount: int = Field(..., gt=0, le=20000)
 
-class BookUpdateRequest(BaseModel):
-    title: Optional[str] = Field(..., max_length=200)
-    description: Optional[str] = Field(..., max_length=1024)
-    author_id: Optional[int] = Field(...)
-    remaining_amount: Optional[int] = Field(...)
+class RequestBookUpdate(BaseModel):
+    title: Optional[str] = Field(default=None, max_length=200)
+    description: Optional[str] = Field(default=None, max_length=1024)
+    author_id: Optional[int] = Field(default=None)
+    remaining_amount: Optional[int] = Field(default=None, gt=0, le=20000)
 
-class BookResponse(BaseModel):
-    status: str
-    message: str
-    data: Optional[Any] = None
+class ResponseBook(StandardSuccessResponse): ...
 
+class ResponseBookList(StandardSuccessListResponse): ...
+class ResponseBookCount(StandardSuccessCountResponse): ...
 
-class BookListResponse(BookResponse):
-    data: Optional[List[dict]] = None
-
-
-class BookCountResponse(BookResponse):
-    data: Optional[int] = None
+class ResponseBookNotFoundBook(StandardFailResponse): ...
+class ResponseBookNotFoundAuthor(StandardFailResponse): ...
+class ResponseBookServiceRepositoryError(StandardServiceRepositoryErrorResponse): ...

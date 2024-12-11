@@ -4,16 +4,14 @@ from httpx import AsyncClient
 from starlette import status
 
 @pytest.mark.anyio
-async def test_health(client: AsyncClient, fastapi_app: FastAPI) -> None:
+async def test_get_authors_empty_list(client: AsyncClient, fastapi_app: FastAPI) -> None:
     """
-    Checks the health endpoint.
-
-    :param client: client for the app.
-    :param fastapi_app: current FastAPI application.
+    Tests retrieving a list of authors when none exist.
     """
-    url = fastapi_app.url_path_for("health_check")
+    url = fastapi_app.url_path_for("list_authors")
     response = await client.get(url)
     assert response.status_code == status.HTTP_200_OK
+    assert response.json()["data"] == []
 
 @pytest.mark.anyio
 async def test_create_author(client: AsyncClient, fastapi_app: FastAPI) -> None:
@@ -132,8 +130,7 @@ async def test_delete_author(client: AsyncClient, fastapi_app: FastAPI) -> None:
 
     delete_url = fastapi_app.url_path_for("delete_author", id=author_id)
     response = await client.delete(delete_url)
-    assert response.status_code == status.HTTP_200_OK
-    assert response.json()["data"] == 1
+    assert response.status_code == status.HTTP_204_NO_CONTENT
     
     after_list_response = await client.get(list_url)
     assert len(before_list_response.json()["data"]) - len(after_list_response.json()["data"]) == 1
@@ -141,3 +138,45 @@ async def test_delete_author(client: AsyncClient, fastapi_app: FastAPI) -> None:
     get_url = fastapi_app.url_path_for("get_author_info", id=author_id)
     get_response = await client.get(get_url)
     assert get_response.status_code == status.HTTP_404_NOT_FOUND
+
+@pytest.mark.anyio
+async def test_create_author_invalid_data(client: AsyncClient, fastapi_app: FastAPI) -> None:
+    """
+    Tests creating an author with invalid or missing data.
+    """
+    url = fastapi_app.url_path_for("create_author")
+
+    response = await client.post(url, json={})
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    payload = {"name": "Invalid", "surname": "User", "birth_date": "not-a-date"}
+    response = await client.post(url, json=payload)
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+@pytest.mark.anyio
+async def test_get_non_existent_author(client: AsyncClient, fastapi_app: FastAPI) -> None:
+    """
+    Tests retrieving a non-existent author by ID.
+    """
+    url = fastapi_app.url_path_for("get_author_info", id=99999)
+    response = await client.get(url)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+@pytest.mark.anyio
+async def test_update_non_existent_author(client: AsyncClient, fastapi_app: FastAPI) -> None:
+    """
+    Tests updating a non-existent author.
+    """
+    url = fastapi_app.url_path_for("update_author", id=99999)
+    payload = {"name": "Non-existent", "surname": "Author", "birth_date": "1980-01-01"}
+    response = await client.put(url, json=payload)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+@pytest.mark.anyio
+async def test_delete_non_existent_author(client: AsyncClient, fastapi_app: FastAPI) -> None:
+    """
+    Tests deleting a non-existent author.
+    """
+    url = fastapi_app.url_path_for("delete_author", id=99999)
+    response = await client.delete(url)
+    assert response.status_code == status.HTTP_404_NOT_FOUND

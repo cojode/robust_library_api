@@ -4,7 +4,6 @@ from . import CRUDRepository
 
 T = TypeVar("T")
 
-
 class ExtendedCRUDRepository(CRUDRepository[T]):
     async def find_all(self, **filters) -> List[T]:
         """

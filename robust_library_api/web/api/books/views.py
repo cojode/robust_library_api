@@ -1,14 +1,28 @@
 from fastapi import APIRouter, Depends, status
 
-from robust_library_api.services.book.service import BookService
 from robust_library_api.container.container import init_container
 
+from robust_library_api.services.book.service import BookService
+
+from robust_library_api.services.book.exc import (
+    BookServiceRepositoryError,
+    BookNotFoundAuthorError,
+    BookNotFoundBookError,
+    BookNotFoundDeletedError,
+)
+
+
+from robust_library_api.web.api.utils import raise_http_exception_with_model_response
+
 from robust_library_api.web.api.books.schema import (
-    BookCreateRequest, 
-    BookUpdateRequest,
-    BookListResponse,
-    BookResponse,
-    BookCountResponse
+    RequestBookCreate, 
+    RequestBookUpdate,
+    ResponseBook,
+    ResponseBookCount,
+    ResponseBookList,
+    ResponseBookNotFoundBook,
+    ResponseBookNotFoundAuthor,
+    ResponseBookServiceRepositoryError
 )
 
 router = APIRouter()
@@ -22,7 +36,7 @@ async def get_book_service(
 @router.post(
     "/books",
     status_code=status.HTTP_201_CREATED,
-    response_model=BookResponse,
+    response_model=ResponseBook,
     responses={
         201: {
             "description": "Book created successfully.",
@@ -45,16 +59,30 @@ async def get_book_service(
     },
 )
 async def create_book(
-    data: BookCreateRequest,
+    data: RequestBookCreate,
     book_service: BookService = Depends(get_book_service),
 ):
-    return await book_service.book_creation(**dict(data)) 
+    try:
+        return await book_service.book_creation(**dict(data))
+    except BookNotFoundAuthorError as e:
+        raise_http_exception_with_model_response(
+            exc_from=e,
+            status=status.HTTP_404_NOT_FOUND,
+            response_model=ResponseBookNotFoundAuthor
+        )
+    except BookServiceRepositoryError as e:
+        raise_http_exception_with_model_response(
+            exc_from=e,
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            response_model=ResponseBookServiceRepositoryError
+        )
+        
 
 
 @router.get(
     "/books",
     status_code=status.HTTP_200_OK,
-    response_model=BookListResponse,
+    response_model=ResponseBookList,
     responses={
         200: {
             "description": "List of books fetched successfully.",
@@ -79,13 +107,19 @@ async def create_book(
     },
 )
 async def list_books(book_service: BookService = Depends(get_book_service)):
-    return await book_service.all_books_list()
-
+    try:
+        return await book_service.all_books_list()
+    except BookServiceRepositoryError as e:
+        raise_http_exception_with_model_response(
+            exc_from=e,
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            response_model=ResponseBookServiceRepositoryError
+        )
 
 @router.get(
-    "/books/{book_id}",
+    "/books/{id}",
     status_code=status.HTTP_200_OK,
-    response_model=BookResponse,
+    response_model=ResponseBook,
     responses={
         200: {
             "description": "Book information fetched successfully.",
@@ -120,15 +154,28 @@ async def list_books(book_service: BookService = Depends(get_book_service)):
     },
 )
 async def get_book_info(
-    book_id: int, book_service: BookService = Depends(get_book_service)
+    id: int, book_service: BookService = Depends(get_book_service)
 ):
-    return await book_service.obtain_book_information(book_id)
+    try:
+        return await book_service.obtain_book_information(id)
+    except BookNotFoundBookError as e:
+        raise raise_http_exception_with_model_response(
+            exc_from=e,
+            status=status.HTTP_404_NOT_FOUND,
+            response_model=ResponseBookNotFoundBook
+        )
+    except BookServiceRepositoryError as e:
+        raise_http_exception_with_model_response(
+            exc_from=e,
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            response_model=ResponseBookServiceRepositoryError
+        )
 
 
 @router.put(
-    "/books/{book_id}",
+    "/books/{id}",
     status_code=status.HTTP_200_OK,
-    response_model=BookCountResponse,
+    response_model=ResponseBookCount,
     responses={
         200: {
             "description": "Book information updated successfully.",
@@ -157,19 +204,36 @@ async def get_book_info(
     },
 )
 async def update_book(
-    book_id: int,
-    new_book_fields: BookUpdateRequest,
+    id: int,
+    new_book_fields: RequestBookUpdate,
     book_service: BookService = Depends(get_book_service),
 ):
-    return await book_service.update_book_information(
-        book_id, **dict(new_book_fields)
-    )
-
+    try:
+        return await book_service.update_book_information(
+            id, **dict(new_book_fields)
+        )
+    except BookNotFoundBookError as e:
+        raise raise_http_exception_with_model_response(
+            exc_from=e,
+            status=status.HTTP_404_NOT_FOUND,
+            response_model=ResponseBookNotFoundBook
+        )
+    except BookNotFoundAuthorError as e:
+        raise raise_http_exception_with_model_response(
+            exc_from=e,
+            status=status.HTTP_404_NOT_FOUND,
+            response_model=ResponseBookNotFoundAuthor
+        )
+    except BookServiceRepositoryError as e:
+        raise_http_exception_with_model_response(
+            exc_from=e,
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            response_model=ResponseBookServiceRepositoryError
+        )
 
 @router.delete(
-    "/books/{book_id}",
-    status_code=status.HTTP_200_OK,
-    response_model=BookCountResponse,
+    "/books/{id}",
+    status_code=status.HTTP_204_NO_CONTENT,
     responses={
         200: {
             "description": "Book deleted successfully.",
@@ -198,6 +262,19 @@ async def update_book(
     },
 )
 async def delete_book(
-    book_id: int, book_service: BookService = Depends(get_book_service)
+    id: int, book_service: BookService = Depends(get_book_service)
 ):
-    return await book_service.delete_book(book_id)
+    try:
+        await book_service.delete_book(id)
+    except BookNotFoundDeletedError as e:
+        raise_http_exception_with_model_response(
+            exc_from=e,
+            status=status.HTTP_404_NOT_FOUND,
+            response_model=ResponseBookNotFoundBook
+        )
+    except BookServiceRepositoryError as e:
+        raise_http_exception_with_model_response(
+            exc_from=e,
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            response_model=ResponseBookServiceRepositoryError
+        )
