@@ -46,13 +46,13 @@ async def get_book_service(
                 "application/json": {
                     "example": {
                         "status": "success",
-                        "message": "Book created successfully.",
+                        "message": "Book created sucessfully.",
                         "data": {
-                            "id": 1,
-                            "title": "John",
-                            "description": "Doe",
+                            "title": "The Hitchhiker’s Guide to the Galaxy",
+                            "description": "42",
                             "author_id": 1,
-                            "remaining_amount": 42
+                            "remaining_amount": 50,
+                            "id": 4
                         }
                     }
                 }
@@ -64,6 +64,7 @@ async def create_book(
     data: RequestBookCreate,
     book_service: BookService = Depends(get_book_service),
 ):
+    """Creates a book entity related to author."""
     try:
         return await book_service.book_creation(**dict(data))
     except BookNotFoundAuthorError as e:
@@ -91,17 +92,17 @@ async def create_book(
             "content": {
                 "application/json": {
                     "example": {
-                        "status": "success",
-                        "message": "Books fetched successfully.",
-                        "data": [
-                            {
-                            "id": 1,
-                            "title": "John",
-                            "description": "Doe",
-                            "author_id": 1,
-                            "remaining_amount": 42
-                            }
-                        ]
+                    "status": "success",
+                    "message": "Books fetched successfully.",
+                    "data": [
+                        {
+                        "author_id": 1,
+                        "id": 1,
+                        "title": "sample_book_title",
+                        "description": "string",
+                        "remaining_amount": 8
+                        }
+                    ]
                     }
                 }
             },
@@ -109,6 +110,7 @@ async def create_book(
     },
 )
 async def list_books(book_service: BookService = Depends(get_book_service)):
+    """Returns all books in a list."""
     try:
         return await book_service.all_books_list()
     except BookServiceRepositoryError as e:
@@ -127,15 +129,15 @@ async def list_books(book_service: BookService = Depends(get_book_service)):
             "description": "Book information fetched successfully.",
             "content": {
                 "application/json": {
-                    "example": {
-                        "status": "success",
-                        "message": "Book information fetched successfully.",
-                        "data": {
-                            "id": 1,
-                            "title": "John",
-                            "description": "Doe",
-                            "author_id": 1,
-                            "remaining_amount": 42
+                    "example":{
+                    "status": "success",
+                    "message": "Book information fetched successfully.",
+                    "data": {
+                        "author_id": 1,
+                        "id": 4,
+                        "title": "The Hitchhiker’s Guide to the Galaxy",
+                        "description": "42",
+                        "remaining_amount": 50
                         }
                     }
                 }
@@ -146,9 +148,10 @@ async def list_books(book_service: BookService = Depends(get_book_service)):
             "content": {
                 "application/json": {
                     "example": {
-                        "status": "error",
-                        "message": "Book with ID 42 not found.",
-                        "data": None
+                        "detail": {
+                            "status": "fail",
+                            "message": "Book with ID 42 not found."
+                        }
                     }
                 }
             },
@@ -158,6 +161,10 @@ async def list_books(book_service: BookService = Depends(get_book_service)):
 async def get_book_info(
     id: int, book_service: BookService = Depends(get_book_service)
 ):
+    """
+    Returns book rows by its id.
+    If id does not match with any existing books, returns 404.
+    """
     try:
         return await book_service.obtain_book_information(id)
     except BookNotFoundBookError as e:
@@ -191,15 +198,30 @@ async def get_book_info(
                 }
             },
         },
+        400: {
+            "description": "Author not found.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": {
+                            "status": "fail",
+                            "message": "Author with ID 0 not found."
+                        }
+                    }
+                }
+            }
+        },
         404: {
             "description": "Book not found.",
             "content": {
                 "application/json": {
                     "example": {
-                        "status": "error",
-                        "message": "Book with ID 42 not found.",
-                        "data": None
+                        "detail": {
+                            "status": "fail",
+                            "message": "Book with ID 42 not found."
+                        }
                     }
+
                 }
             },
         },
@@ -210,6 +232,11 @@ async def update_book(
     new_book_fields: RequestBookUpdate,
     book_service: BookService = Depends(get_book_service),
 ):
+    """
+    Attempts in updating provided book fields.
+    If no book with provided id exists, returns 404.
+    If no author with provided author_id exists, return 400.
+    """
     try:
         return await book_service.update_book_information(
             id, **dict(new_book_fields)
@@ -223,7 +250,7 @@ async def update_book(
     except BookNotFoundAuthorError as e:
         raise raise_http_exception_with_model_response(
             exc_from=e,
-            status=status.HTTP_404_NOT_FOUND,
+            status=status.HTTP_400_BAD_REQUEST,
             response_model=ResponseBookNotFoundAuthor
         )
     except BookServiceRepositoryError as e:
@@ -237,14 +264,15 @@ async def update_book(
     "/books/{id}",
     status_code=status.HTTP_204_NO_CONTENT,
     responses={
-        200: {
-            "description": "Book deleted successfully.",
+        400: {
+            "description": "Book can't be deleted.",
             "content": {
                 "application/json": {
                     "example": {
-                        "status": "success",
-                        "message": "1 book deleted successfully.",
-                        "data": 1
+                        "detail": {
+                            "status": "fail",
+                            "message": "Can't delete book: Book with ID 1 still has related borrows in table (borrow)."
+                        }
                     }
                 }
             },
@@ -254,9 +282,10 @@ async def update_book(
             "content": {
                 "application/json": {
                     "example": {
-                        "status": "error",
-                        "message": "Book with ID 42 not found.",
-                        "data": None
+                        "detail": {
+                            "status": "error",
+                            "message": "Book with ID 42 not found.",
+                        }
                     }
                 }
             },
@@ -266,6 +295,11 @@ async def update_book(
 async def delete_book(
     id: int, book_service: BookService = Depends(get_book_service)
 ):
+    """
+    Attempts to delete a book by its id.
+    If no book is matched with provided id, returns 404.
+    If there are any borrows related with deleted book, deletion is prevented with 400.
+    """
     try:
         await book_service.delete_book(id)
     except BookNotFoundDeletedError as e:

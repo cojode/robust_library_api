@@ -11,10 +11,10 @@ class ResponseStatus(str, enum.Enum):
 class StandardResponse(BaseModel):
     status: ResponseStatus
     message: str
-    data: Optional[Any] = None
 
 class StandardSuccessResponse(StandardResponse):
     status: ResponseStatus = ResponseStatus.success
+    data: Optional[Any] = None
     
 class StandardSuccessListResponse(StandardSuccessResponse):
     data: Optional[List[dict]] = None

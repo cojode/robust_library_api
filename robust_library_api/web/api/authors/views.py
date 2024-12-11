@@ -135,9 +135,10 @@ async def list_authors(author_service: AuthorService = Depends(get_author_servic
             "content": {
                 "application/json": {
                     "example": {
-                        "status": "error",
-                        "message": "Author with ID 42 not found.",
-                        "data": None
+                        "detail": {
+                            "status": "fail",
+                            "message": "Author with ID 42 not found."
+                        }
                     }
                 }
             },
@@ -188,9 +189,10 @@ async def get_author_info(
             "content": {
                 "application/json": {
                     "example": {
-                        "status": "error",
-                        "message": "Author with ID 42 not found.",
-                        "data": None
+                        "detail": {
+                            "status": "fail",
+                            "message": "Author with ID 42 not found."
+                        }
                     }
                 }
             },
@@ -228,14 +230,15 @@ async def update_author(
     "/authors/{id}",
     status_code=status.HTTP_204_NO_CONTENT,
     responses={
-        200: {
-            "description": "Author deleted successfully.",
+        400: {
+            "description": "Can't delete author",
             "content": {
                 "application/json": {
                     "example": {
-                        "status": "success",
-                        "message": "1 author deleted successfully.",
-                        "data": 1
+                        "detail": {
+                            "status": "fail",
+                            "message": "Can not delete author: Author with ID 1 still has related books in table (book)."
+                        }
                     }
                 }
             },
@@ -245,9 +248,10 @@ async def update_author(
             "content": {
                 "application/json": {
                     "example": {
-                        "status": "error",
-                        "message": "Author with ID 42 not found.",
-                        "data": None
+                        "detail": {
+                            "status": "fail",
+                            "message": "Author with ID 42 not found."
+                        }
                     }
                 }
             },
@@ -260,7 +264,7 @@ async def delete_author(
     """
     Deletes an author from database.
     If no author were deleted, returns 404.
-    If there are any books with deleted author, deletion is prevented with 400.
+    If there are any books related with deleted author, deletion is prevented with 400.
     """
     try:
         await author_service.delete_author(author_id=id)

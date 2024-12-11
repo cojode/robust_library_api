@@ -45,13 +45,38 @@ async def get_borrow_service(
                 "application/json": {
                     "example": {
                         "status": "success",
-                        "message": "Borrow created successfully.",
+                        "message": "Borrow created sucessfully.",
                         "data": {
-                            "id": 1,
-                            "title": "John",
-                            "description": "Doe",
-                            "author_id": 1,
-                            "remaining_amount": 42
+                            "book_id": 4,
+                            "reader_name": "string",
+                            "date_of_issue": "2024-12-11",
+                            "id": 5
+                        }
+                    }
+                }
+            },
+        },
+        404: {
+            "description": "Borrow created successfully.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": {
+                                "status": "fail",
+                                "message": "Book with ID 999 not found."
+                        }
+                    }
+                }
+            },
+        },
+        400: {
+            "description": "Borrow created successfully.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": {
+                                "status": "fail",
+                                "message": "Can't borrow: book with ID 1 are over - no book left."
                         }
                     }
                 }
@@ -63,6 +88,12 @@ async def create_borrow(
     data: RequestBorrowCreate,
     borrow_service: BorrowService = Depends(get_borrow_service),
 ):
+    """
+    Creates a borrow entity.
+    Related book entity would lose a book balance (remaining_amount).
+    Returns 404 if related book id does not match with any of existing books.
+    Returns 400 if related book balance is exhausted(equals 0).
+    """
     try:
         return await borrow_service.borrow_creation(**dict(data))
     except BorrowNotFoundBookError as e:
@@ -99,14 +130,21 @@ async def create_borrow(
                         "status": "success",
                         "message": "Borrows fetched successfully.",
                         "data": [
-                            {
-                            "id": 1,
-                            "title": "John",
-                            "description": "Doe",
-                            "author_id": 1,
-                            "remaining_amount": 42
-                            }
-                        ]
+                    {
+                        "date_of_issue": "2024-12-11",
+                        "id": 3,
+                        "reader_name": "abyss",
+                        "date_of_return": None,
+                        "book_id": 1
+                    },
+                    {
+                        "date_of_issue": "2024-12-11",
+                        "id": 1,
+                        "reader_name": "abyss",
+                        "date_of_return": "2024-12-11",
+                        "book_id": 1
+                    }, 
+                ]
                     }
                 }
             },
@@ -114,6 +152,9 @@ async def create_borrow(
     },
 )
 async def list_borrows(borrow_service: BorrowService = Depends(get_borrow_service)):
+    """
+    Returns all borrows in a list.
+    """
     try:
         return await borrow_service.all_borrows_list()
     except BorrowServiceRepositoryError as e:
@@ -136,11 +177,11 @@ async def list_borrows(borrow_service: BorrowService = Depends(get_borrow_servic
                         "status": "success",
                         "message": "Borrow information fetched successfully.",
                         "data": {
-                            "id": 1,
-                            "title": "John",
-                            "description": "Doe",
-                            "author_id": 1,
-                            "remaining_amount": 42
+                            "date_of_issue": "2024-12-11",
+                            "id": 2,
+                            "reader_name": "string",
+                            "date_of_return": "2024-12-11",
+                            "book_id": 1
                         }
                     }
                 }
@@ -150,10 +191,11 @@ async def list_borrows(borrow_service: BorrowService = Depends(get_borrow_servic
             "description": "Borrow not found.",
             "content": {
                 "application/json": {
-                    "example": {
-                        "status": "error",
-                        "message": "Borrow with ID 42 not found.",
-                        "data": None
+                    "example":{
+                        "detail": {
+                            "status": "fail",
+                            "message": "Borrow with ID 8888 not found."
+                        }
                     }
                 }
             },
@@ -163,6 +205,10 @@ async def list_borrows(borrow_service: BorrowService = Depends(get_borrow_servic
 async def get_borrow_info(
     id: int, borrow_service: BorrowService = Depends(get_borrow_service)
 ):
+    """
+    Obtains borrow information by its id.
+    If no borrow matches with provided id, returns 404.
+    """
     try:
         return await borrow_service.obtain_borrow_information(id)
     except BorrowNotFoundBorrowError as e:
@@ -190,14 +236,15 @@ async def get_borrow_info(
                 }
             },
         },
-        404: {
+        400: {
             "description": "Borrow not found.",
             "content": {
                 "application/json": {
                     "example": {
-                        "status": "error",
-                        "message": "Borrow with ID 42 not found.",
-                        "data": None
+                        "detail": {
+                            "status": "fail",
+                            "message": "Can't close borrow: borrow with ID 1 already closed."
+                        }
                     }
                 }
             },
@@ -208,6 +255,13 @@ async def return_borrow(
     id: int,
     borrow_service: BorrowService = Depends(get_borrow_service)
 ):
+    """
+    Patch to borrow entity representing returning a book from a borrow.
+    Returns 400 if borrow was already closed before.
+    Else returns 204, and if borrow with provided id really exists:
+    1) Appends field with request date 
+    2) Appends book balance of related book entity on 1
+    """
     try:
         await borrow_service.close_borrow(borrow_id=id)
     except BorrowAlreadyClosedError as e:
@@ -216,6 +270,8 @@ async def return_borrow(
             status=status.HTTP_400_BAD_REQUEST,
             response_model=ResponseBorrowAlreadyClosed
         )
+    except BorrowNotFoundBorrowError:
+        pass
     except BorrowServiceRepositoryError as e:
         raise_http_exception_with_model_response(
             exc_from=e,
