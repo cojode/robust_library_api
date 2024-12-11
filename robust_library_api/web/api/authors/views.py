@@ -45,7 +45,7 @@ async def get_author_service(
                             "id": 1,
                             "name": "John",
                             "surname": "Doe",
-                            "birth_date": "11.11.990"
+                            "birth_date": "11.11.1990"
                         }
                     }
                 }
@@ -57,6 +57,9 @@ async def create_author(
     data: RequestAuthorCreate,
     author_service: AuthorService = Depends(get_author_service),
 ):  
+    """
+    Creates new author.
+    """
     try:
         return await author_service.author_creation(**dict(data))
     except AuthorServiceRepositoryError as e:
@@ -90,6 +93,9 @@ async def create_author(
     },
 )
 async def list_authors(author_service: AuthorService = Depends(get_author_service)):
+    """
+    Returns all authors in list.
+    """
     try:
         return await author_service.all_authors_list()
     except AuthorServiceRepositoryError as e:
@@ -114,8 +120,9 @@ async def list_authors(author_service: AuthorService = Depends(get_author_servic
                         "message": "Author information fetched successfully.",
                         "data": {
                             "id": 1,
-                            "name": "John Doe",
-                            "books": ["Book 1", "Book 2"]
+                            "name": "John",
+                            "surname": "Doe",
+                            "birth_date": "11.11.1990"
                         }
                     }
                 }
@@ -138,6 +145,10 @@ async def list_authors(author_service: AuthorService = Depends(get_author_servic
 async def get_author_info(
     id: int, author_service: AuthorService = Depends(get_author_service)
 ): 
+    """
+    Gathers information about sepcific author by related id.
+    If no author found with provided id, returns 404.
+    """
     try:
         return await author_service.obtain_author_information(author_id=id)
     except AuthorNotFoundError as e:
@@ -164,7 +175,7 @@ async def get_author_info(
                 "application/json": {
                     "example": {
                         "status": "success",
-                        "message": "1 author updated successfully.",
+                        "message": "1 author(s) updated successfully.",
                         "data": 1
                     }
                 }
@@ -189,8 +200,11 @@ async def update_author(
     new_author_fields: RequestAuthorUpdate,
     author_service: AuthorService = Depends(get_author_service),
 ):
+    """
+    Updates author entry with provided fields.
+    If no author found with provided id, returns 404.
+    """
     try:
-        print(new_author_fields)
         return await author_service.update_author_information(
             author_id=id, **dict(new_author_fields)
         )
@@ -241,6 +255,10 @@ async def update_author(
 async def delete_author(
     id: int, author_service: AuthorService = Depends(get_author_service)
 ):
+    """
+    Deletes an author from database.
+    If no author were deleted, returns 404.
+    """
     try:
         await author_service.delete_author(author_id=id)
     except AuthorNotFoundDeletedError as e:
