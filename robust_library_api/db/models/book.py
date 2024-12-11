@@ -4,6 +4,7 @@ from sqlalchemy.sql.sqltypes import String, Integer
 
 from robust_library_api.db.base import Base
 
+
 class BookModel(Base):
     __tablename__ = "book"
 

@@ -1,18 +1,14 @@
-def repository_for(model, base_class):
-    def wrapper(cls):
-        class WrappedRepository(cls, base_class):
-            def __init__(self, session, *args, **kwargs):
-                super().__init__(session, model)
-                if hasattr(cls, '__init__'):
-                    cls.__init__(self, session, *args, **kwargs)
-        return WrappedRepository
-    return wrapper
+from robust_library_api.db.database import Database
 
-def crud_repository_for(model):
-    from . import CRUDRepository
-    return repository_for(model, CRUDRepository)
+def repository_for(model):
+    def decorator(cls):
+        orig_init = cls.__init__
 
+        def __init__(self, database: Database, *args, **kwargs):
+            super(cls, self).__init__(database, model)
+            orig_init(self, database, model, *args, **kwargs)
 
-def extended_crud_repository_for(model):
-    from . import ExtendedCRUDRepository
-    return repository_for(model, ExtendedCRUDRepository)
+        cls.__init__ = __init__
+        return cls
+
+    return decorator

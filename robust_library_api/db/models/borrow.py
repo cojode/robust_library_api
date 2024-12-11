@@ -6,6 +6,7 @@ from sqlalchemy.sql.sqltypes import String, Date
 
 from robust_library_api.db.base import Base
 
+
 class BorrowModel(Base):
     __tablename__ = "borrow"
 

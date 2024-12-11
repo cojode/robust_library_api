@@ -1,10 +1,11 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import Type, TypeVar, List, Optional, Any, Dict, Generic
 from sqlalchemy import select as sql_select, update as sql_update, delete as sql_delete, Select
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from . import (
+from robust_library_api.db.database import Database
+from .exc import (
     RepositoryError
 )
 
@@ -77,17 +78,20 @@ class AbstractCRUDRepository(ABC, Generic[T]):
         """
         pass
 
+T = TypeVar("T")
+
+@dataclass
 class CRUDRepository(AbstractCRUDRepository[T]):
-    def __init__(self, session: AsyncSession, model: Type[T]):
-        self.session = session
-        self.model = model
+    database: Database
+    model: Type[T]
 
     async def create(self, entity: Optional[T] = None, **kwargs: Any) -> T:
         try:
             instance = entity if entity else self.model(**kwargs)
-            self.session.add(instance)
-            await self.session.flush([instance])
-            return instance
+            async with self.database.get_session() as session:
+                session.add(instance)
+                await session.flush([instance])
+                return instance
         except SQLAlchemyError as e:
             raise RepositoryError(f"Failed to create entity: {e}") from e
 
@@ -110,9 +114,10 @@ class CRUDRepository(AbstractCRUDRepository[T]):
             if raw_query is not None:
                 query = raw_query
 
-            result = await self.session.execute(query)
-            result_scalars = result.scalars()
-            return result_scalars.first() if only_first else result_scalars.all()
+            async with self.database.get_session() as session:
+                result = await session.execute(query)
+                result_scalars = result.scalars()
+                return result_scalars.first() if only_first else result_scalars.all()
 
         except SQLAlchemyError as e:
             raise RepositoryError(f"Failed to read entities: {e}") from e
@@ -124,10 +129,11 @@ class CRUDRepository(AbstractCRUDRepository[T]):
         if not fields:
             raise ValueError("No fields provided to update")
         try:
-            query = sql_update(self.model).values(**fields).filter_by(**filters)
-            result = await self.session.execute(query)
-            await self.session.commit()
-            return result.rowcount
+            async with self.database.get_session() as session:
+                query = sql_update(self.model).values(**fields).filter_by(**filters)
+                result = await session.execute(query)
+                await session.commit()
+                return result.rowcount
         except SQLAlchemyError as e:
             raise RepositoryError(f"Failed to update entities: {e}") from e
 
@@ -136,14 +142,15 @@ class CRUDRepository(AbstractCRUDRepository[T]):
         Deletes entities based on conditions set in filters.
         """
         try:
-            if entity is not None:
-                await self.session.delete(entity)
-                return 1
-            
-            query = sql_delete(self.model).filter_by(**filters)
-            result = await self.session.execute(query)
-            await self.session.commit()
-            return result.rowcount
+            async with self.database.get_session() as session:
+                if entity is not None:
+                    await session.delete(entity)
+                    return 1
+                
+                query = sql_delete(self.model).filter_by(**filters)
+                result = await session.execute(query)
+                await session.commit()
+                return result.rowcount
         except SQLAlchemyError as e:
             raise RepositoryError(f"Failed to delete entities: {e}") from e
 
@@ -152,9 +159,10 @@ class CRUDRepository(AbstractCRUDRepository[T]):
         Saves (inserts or updates) the provided entity in the database.
         """
         try:
-            self.session.add(entity)
-            await self.session.flush()
-            await self.session.refresh(entity)
-            return entity
+            async with self.database.get_session() as session:
+                session.add(entity)
+                await session.flush()
+                await session.refresh(entity)
+                return entity
         except SQLAlchemyError as e:
             raise RepositoryError(f"Failed to save entity: {e}") from e

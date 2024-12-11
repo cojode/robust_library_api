@@ -5,6 +5,7 @@ from sqlalchemy.sql.sqltypes import String, Date
 
 from robust_library_api.db.base import Base
 
+
 class AuthorModel(Base):
     __tablename__ = "author"
 
